@@ -70,7 +70,7 @@ ENV_STR="\$\$USE_AUTH0 \$\$AUTH_AUDIENCE \$\$AUTH_AUTHORITY \$\$AUTH_CLIENT_ID \
 
 OIDC_TRUSTED_DOMAINS="/usr/share/nginx/html/OidcTrustedDomains.js"
 envsubst "$ENV_STR" < "$OIDC_TRUSTED_DOMAINS".tmpl > "$OIDC_TRUSTED_DOMAINS"
-for f in $(grep -R -l AUTH_SUPPORTED_SCOPES /usr/share/nginx/html); do
+for f in $(grep -R -l -E '\$(AUTH_|NETBIRD_|USE_AUTH0)' /usr/share/nginx/html); do
     cp "$f" "$f".copy
     envsubst "$ENV_STR" < "$f".copy > "$f"
     rm "$f".copy

@@ -62,6 +62,8 @@ export default function OIDCProvider({ children }: Props) {
       // disabling service worker
       //service_worker_relative_url: "/OidcServiceWorker.js",
       service_worker_only: false,
+      storage: window.localStorage,
+      login_state_storage: window.localStorage,
       authority_configuration: config.auth0Auth
         ? auth0AuthorityConfig
         : undefined,
