@@ -22,6 +22,11 @@ export default function OIDCProvider({ children }: Props) {
   useEffect(() => {
     const extras = buildExtras();
 
+    // Build same-origin token endpoint URL to avoid cross-origin CSRF issues.
+    // The authority is the SSO domain but the token exchange POST must go
+    // through the same-origin proxy to avoid Django CSRF rejections.
+    const sameOriginTokenEndpoint = window.location.origin + "/application/o/token/";
+
     const cfg: AuthProviderProps = {
       authority: config.authority,
       client_id: config.clientId,
@@ -32,6 +37,11 @@ export default function OIDCProvider({ children }: Props) {
       // Store ALL OIDC state (including PKCE verifier) in localStorage so it
       // survives Authentik's redirect chain which loses sessionStorage.
       userStore: new WebStorageStateStore({ store: window.localStorage }),
+      // Override the token endpoint to use same-origin proxy (avoids CORS/CSRF
+      // issues with cross-origin POST to Authentik's token endpoint).
+      metadataSeed: {
+        token_endpoint: sameOriginTokenEndpoint,
+      },
       // Automatically process the ?code= callback when it appears in the URL
       onSigninCallback: () => {
         // After the callback, remove the OIDC params from the URL without
