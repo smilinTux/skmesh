@@ -79,12 +79,26 @@ export function useNetBirdFetch(ignoreError: boolean = false): {
   const handleErrors = useApiErrorHandling(ignoreError);
 
   const isTokenExpired = async () => {
+    // If no token at all, wait longer for OIDC callback to complete
+    if (!token) {
+      let attempts = 10;
+      while (!auth.user && attempts > 0) {
+        await sleep(500);
+        attempts = attempts - 1;
+      }
+      // Re-read token after waiting
+      const freshToken = tokenSource.toLowerCase() === "idtoken"
+        ? auth.user?.id_token
+        : auth.user?.access_token;
+      if (!freshToken) return true;
+      return isExpired(freshToken);
+    }
     let attempts = 4;
-    while (isExpired(token ?? "") && attempts > 0) {
+    while (isExpired(token) && attempts > 0) {
       await sleep(500);
       attempts = attempts - 1;
     }
-    return isExpired(token ?? "");
+    return isExpired(token);
   };
 
   const nativeFetch = async (input: RequestInfo, init?: RequestInit) => {
