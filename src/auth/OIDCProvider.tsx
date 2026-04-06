@@ -39,8 +39,11 @@ export default function OIDCProvider({ children }: Props) {
       userStore: new WebStorageStateStore({ store: window.localStorage }),
       // Override the token endpoint to use same-origin proxy (avoids CORS/CSRF
       // issues with cross-origin POST to Authentik's token endpoint).
+      // Also set issuer to match what the proxy returns (Authentik sets iss
+      // based on Host header, which is skmesh.* when going through proxy).
       metadataSeed: {
         token_endpoint: sameOriginTokenEndpoint,
+        issuer: window.location.origin + "/application/o/skmesh/",
       },
       // Automatically process the ?code= callback when it appears in the URL
       onSigninCallback: () => {
