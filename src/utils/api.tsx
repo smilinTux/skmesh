@@ -79,6 +79,20 @@ export function useNetBirdFetch(ignoreError: boolean = false): {
   const handleErrors = useApiErrorHandling(ignoreError);
 
   const isTokenExpired = async () => {
+    // Debug: log token state
+    console.log("[skmesh-debug] tokenSource:", tokenSource, "auth.user:", !!auth.user, "id_token:", !!auth.user?.id_token, "access_token:", !!auth.user?.access_token, "token:", !!token);
+    if (auth.user?.id_token) {
+      try {
+        const parts = auth.user.id_token.split('.');
+        if (parts.length >= 2) {
+          const payload = JSON.parse(atob(parts[1]));
+          console.log("[skmesh-debug] id_token claims:", JSON.stringify({iss: payload.iss, exp: payload.exp, iat: payload.iat, now: Math.floor(Date.now()/1000), ttl: payload.exp - Math.floor(Date.now()/1000)}));
+        }
+      } catch(e) { console.log("[skmesh-debug] id_token parse error:", e); }
+    }
+    if (auth.user?.access_token) {
+      console.log("[skmesh-debug] access_token first 50 chars:", auth.user.access_token.substring(0, 50));
+    }
     // If no token at all, wait longer for OIDC callback to complete
     if (!token) {
       let attempts = 10;
