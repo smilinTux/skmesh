@@ -1,4 +1,4 @@
-import { useOidcUser } from "@axa-fr/react-oidc";
+import { useAuth } from "react-oidc-context";
 import Button from "@components/Button";
 import { ArrowRightIcon, PlayIcon } from "lucide-react";
 import Image, { StaticImageData } from "next/image";
@@ -13,8 +13,8 @@ type Props = {
 };
 
 export const OnboardingEnd = ({ onFinish }: Props) => {
-  const { oidcUser: user } = useOidcUser();
-  const name = user?.given_name || user?.name || user?.preferred_username;
+  const { user } = useAuth();
+  const name = user?.profile?.given_name || user?.profile?.name || user?.profile?.preferred_username;
 
   const title = name ? `Congratulations, ${name}!` : "Congratulations!";
 

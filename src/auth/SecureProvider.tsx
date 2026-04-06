@@ -1,7 +1,8 @@
-import { OidcSecure, useOidc } from "@axa-fr/react-oidc";
 import { usePathname } from "next/navigation";
 import * as React from "react";
 import { useEffect } from "react";
+import { useAuth } from "react-oidc-context";
+import FullScreenLoading from "@components/ui/FullScreenLoading";
 
 const QUERY_PARAMS_KEY = "netbird-query-params";
 const PRESERVE_QUERY_PARAMS_PATHS = ["/peer/ssh", "/peer/rdp"];
@@ -24,9 +25,11 @@ const VALID_PARAMS = [
 type Props = {
   children: React.ReactNode;
 };
+
 export const SecureProvider = ({ children }: Props) => {
-  const { isAuthenticated, login } = useOidc();
+  const auth = useAuth();
   const currentPath = usePathname();
+  const isAuthenticated = auth.isAuthenticated;
 
   useEffect(() => {
     if (isAuthenticated && !PRESERVE_QUERY_PARAMS_PATHS.includes(currentPath)) {
@@ -46,21 +49,23 @@ export const SecureProvider = ({ children }: Props) => {
 
   useEffect(() => {
     let timeout: NodeJS.Timeout | undefined = undefined;
-    if (!isAuthenticated) {
+    if (!isAuthenticated && !auth.isLoading && !auth.activeNavigator) {
       timeout = setTimeout(async () => {
-        if (!isAuthenticated) {
-          await login(currentPath);
+        if (!auth.isAuthenticated) {
+          await auth.signinRedirect();
         }
       }, 1500);
     }
     return () => {
       clearTimeout(timeout);
     };
-  }, [currentPath, isAuthenticated, login]);
+  }, [currentPath, isAuthenticated, auth]);
 
-  return (
-    <>
-      <OidcSecure callbackPath={currentPath}>{children}</OidcSecure>
-    </>
-  );
+  // Show loading while the OIDC library is processing the callback or
+  // refreshing tokens.
+  if (auth.isLoading) {
+    return <FullScreenLoading />;
+  }
+
+  return <>{children}</>;
 };

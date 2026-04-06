@@ -1,8 +1,4 @@
-import {
-  useOidc,
-  useOidcAccessToken,
-  useOidcIdToken,
-} from "@axa-fr/react-oidc";
+import { useAuth } from "react-oidc-context";
 import loadConfig from "@utils/config";
 import { sleep } from "@utils/helpers";
 import { usePathname } from "next/navigation";
@@ -75,18 +71,20 @@ export function useNetBirdFetch(ignoreError: boolean = false): {
   fetch: (input: RequestInfo, init?: RequestInit) => Promise<Response>;
 } {
   const tokenSource = config.tokenSource || "accessToken";
-  const { idToken } = useOidcIdToken();
-  const { accessToken } = useOidcAccessToken();
-  const token = tokenSource.toLowerCase() == "idtoken" ? idToken : accessToken;
+  const auth = useAuth();
+  const token =
+    tokenSource.toLowerCase() === "idtoken"
+      ? auth.user?.id_token
+      : auth.user?.access_token;
   const handleErrors = useApiErrorHandling(ignoreError);
 
   const isTokenExpired = async () => {
     let attempts = 4;
-    while (isExpired(token) && attempts > 0) {
+    while (isExpired(token ?? "") && attempts > 0) {
       await sleep(500);
       attempts = attempts - 1;
     }
-    return isExpired(token);
+    return isExpired(token ?? "");
   };
 
   const nativeFetch = async (input: RequestInfo, init?: RequestInit) => {
@@ -214,7 +212,7 @@ export function useApiCall<T>(
 }
 
 export function useApiErrorHandling(ignoreError = false) {
-  const { login } = useOidc();
+  const auth = useAuth();
   const currentPath = usePathname();
   const { setError } = useErrorBoundary();
 
@@ -226,10 +224,10 @@ export function useApiErrorHandling(ignoreError = false) {
 
   return (err: ErrorResponse) => {
     if (err.code == 401 && err.message == "no valid authentication provided") {
-      return login(currentPath);
+      return auth.signinRedirect();
     }
     if (err.code == 401 && err.message == "token expired") {
-      return login(currentPath);
+      return auth.signinRedirect();
     }
     if (err.code == 401 && err.message == "token invalid") {
       setError(err);

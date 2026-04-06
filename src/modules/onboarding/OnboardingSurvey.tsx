@@ -1,4 +1,4 @@
-import { useOidcUser } from "@axa-fr/react-oidc";
+import { useAuth } from "react-oidc-context";
 import Button from "@components/Button";
 import ButtonGroup from "@components/ButtonGroup";
 import { Checkbox } from "@components/Checkbox";
@@ -104,8 +104,8 @@ export const referralSourceOptions = [
 ];
 
 export const OnboardingSurvey = ({ domainCategory, onSubmit }: Props) => {
-  const { oidcUser: user } = useOidcUser();
-  const name = user?.given_name || user?.name || user?.preferred_username;
+  const { user } = useAuth();
+  const name = user?.profile?.given_name || user?.profile?.name || user?.profile?.preferred_username;
   const welcomeMessage = name
     ? `Welcome to NetBird, ${name}!`
     : "Welcome to NetBird!";
@@ -224,7 +224,7 @@ export const OnboardingSurvey = ({ domainCategory, onSubmit }: Props) => {
     let fields: HubspotFormField[] = [];
     try {
       // Fallback: use OIDC user email if loggedInUser?.email is missing
-      const email = loggedInUser?.email || user?.email || "";
+      const email = loggedInUser?.email || user?.profile?.email || "";
       if (loggedInUser || user) {
         fields = [
           {

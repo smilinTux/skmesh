@@ -1,4 +1,4 @@
-import { useOidcUser } from "@axa-fr/react-oidc";
+import { useAuth } from "react-oidc-context";
 import FullScreenLoading from "@components/ui/FullScreenLoading";
 import { Params, useApiCall } from "@utils/api";
 import { useIsMd } from "@utils/responsive";
@@ -37,7 +37,10 @@ export default function ApplicationProvider({ children }: Props) {
   const [latestRelease, setLatestRelease] = useLocalStorage<
     NetbirdRelease | undefined
   >("netbird-latest-release", undefined);
-  const { oidcUser: user } = useOidcUser();
+  const authState = useAuth();
+  // Expose the OIDC profile claims (name, email, picture, etc.) as `user`
+  // so that all existing consumers continue to work without changes.
+  const user = authState.user?.profile ?? null;
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const isMd = useIsMd();
   const userRequest = useApiCall<User[]>(`/users`, true);

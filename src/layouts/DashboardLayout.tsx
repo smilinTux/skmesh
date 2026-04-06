@@ -1,7 +1,7 @@
 "use client";
 
 import "../app/globals.css";
-import { useOidcUser } from "@axa-fr/react-oidc";
+import { useAuth } from "react-oidc-context";
 import Button from "@components/Button";
 import { UserAvatar } from "@components/ui/UserAvatar";
 import { cn } from "@utils/helpers";
@@ -48,7 +48,7 @@ export default function DashboardLayout({
 function DashboardPageContent({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
-  const { oidcUser: user } = useOidcUser();
+  const { user } = useAuth();
   const { mobileNavOpen, toggleMobileNav } = useApplicationContext();
   const isSm = useIsSm();
   const isXs = useIsXs();
@@ -85,10 +85,10 @@ function DashboardPageContent({
               <UserAvatar size={"small"} />
               <div className="flex flex-col space-y-1">
                 <p className="font-medium leading-none dark:text-gray-300">
-                  {user?.name}
+                  {user?.profile?.name}
                 </p>
                 <p className="text-xs leading-none dark:text-gray-400">
-                  {user?.email}
+                  {user?.profile?.email}
                 </p>
               </div>
             </div>

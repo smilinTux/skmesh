@@ -1,4 +1,3 @@
-import { StringMap } from "@axa-fr/react-oidc";
 import { validator } from "@utils/helpers";
 
 interface Config {
@@ -76,7 +75,7 @@ const loadConfig = (): Config => {
  * Build the extras object that will be passed to the auth layer
  */
 export const buildExtras = () => {
-  const extras: StringMap = {};
+  const extras: Record<string, string> = {};
   const config = loadConfig();
 
   if (config.dragQueryParams) {

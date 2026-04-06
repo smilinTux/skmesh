@@ -1,22 +1,25 @@
-import { useOidc } from "@axa-fr/react-oidc";
 import Button from "@components/Button";
 import Paragraph from "@components/Paragraph";
-import loadConfig from "@utils/config";
 import { LogIn } from "lucide-react";
 import { useRouter } from "next/navigation";
 import * as React from "react";
 import { useEffect } from "react";
+import { useAuth } from "react-oidc-context";
 import NetBirdIcon from "@/assets/icons/NetBirdIcon";
-
-const config = loadConfig();
 
 export const SessionLost = () => {
   const router = useRouter();
-  const { logout } = useOidc();
+  const auth = useAuth();
 
   useEffect(() => {
     router.push("/peers");
   });
+
+  const handleLogin = () => {
+    auth.removeUser().then(() => {
+      auth.signinRedirect();
+    });
+  };
 
   return (
     <div
@@ -40,7 +43,7 @@ export const SessionLost = () => {
         variant={"primary"}
         size={"sm"}
         className={"mt-5"}
-        onClick={() => logout("", { client_id: config.clientId })}
+        onClick={handleLogin}
       >
         Login
         <LogIn size={16} />

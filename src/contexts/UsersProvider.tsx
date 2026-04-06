@@ -1,4 +1,4 @@
-import { useOidc } from "@axa-fr/react-oidc";
+import { useAuth } from "react-oidc-context";
 import FullScreenLoading from "@components/ui/FullScreenLoading";
 import useFetchApi from "@utils/api";
 import loadConfig from "@utils/config";
@@ -102,7 +102,7 @@ export const useUserProfile = () => React.useContext(UserProfileContext);
 
 export const useLoggedInUser = () => {
   const { loggedInUser } = useUserProfile();
-  const { logout: oidcLogout } = useOidc();
+  const auth = useAuth();
   const { setGlobalApiParams } = useApplicationContext();
   const isOwner = loggedInUser ? loggedInUser?.role === Role.Owner : false;
   const isAdmin = loggedInUser ? loggedInUser?.role === Role.Admin : false;
@@ -111,9 +111,9 @@ export const useLoggedInUser = () => {
   const isOwnerOrAdmin = isOwner || isAdmin;
 
   const logout = async () => {
-    return oidcLogout("/", { client_id: config.clientId }).then(() => {
-      setGlobalApiParams?.({});
-    });
+    setGlobalApiParams?.({});
+    await auth.removeUser();
+    await auth.signoutRedirect({ post_logout_redirect_uri: window.location.origin + "/" });
   };
 
   return {

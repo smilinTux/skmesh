@@ -1,6 +1,6 @@
 "use client";
 
-import { useOidc } from "@axa-fr/react-oidc";
+import { useAuth } from "react-oidc-context";
 import Button from "@components/Button";
 import Paragraph from "@components/Paragraph";
 import loadConfig from "@utils/config";
@@ -12,7 +12,8 @@ import NetBirdIcon from "@/assets/icons/NetBirdIcon";
 const config = loadConfig();
 
 export default function ErrorPage() {
-  const { logout, isAuthenticated } = useOidc();
+  const auth = useAuth();
+  const isAuthenticated = auth.isAuthenticated;
   const router = useRouter();
   const searchParams = useSearchParams();
   const [error, setError] = useState<{
@@ -37,8 +38,9 @@ export default function ErrorPage() {
   }, [searchParams]);
 
   const handleLogout = () => {
-    // Use the same logout pattern as OIDCError
-    logout("/", { client_id: config.clientId });
+    auth.removeUser().then(() => {
+      auth.signoutRedirect({ post_logout_redirect_uri: window.location.origin + "/" });
+    });
   };
 
   const handleRetry = () => {

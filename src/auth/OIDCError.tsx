@@ -1,4 +1,3 @@
-import { useOidc, useOidcUser } from "@axa-fr/react-oidc";
 import Button from "@components/Button";
 import Paragraph from "@components/Paragraph";
 import loadConfig from "@utils/config";
@@ -6,19 +5,25 @@ import { ArrowRightIcon } from "lucide-react";
 import { useSearchParams } from "next/navigation";
 import * as React from "react";
 import { useEffect, useState } from "react";
+import { useAuth } from "react-oidc-context";
 import NetBirdIcon from "@/assets/icons/NetBirdIcon";
 
 const config = loadConfig();
 
 export const OIDCError = () => {
-  const { oidcUserLoadingState } = useOidcUser();
+  const auth = useAuth();
   const params = useSearchParams();
   const errorParam = params.get("error");
   const accessDenied = errorParam === "access_denied";
   const invalidRequest = errorParam === "invalid_request";
   const [title, setTitle] = useState(params.get("error_description"));
   const errorDescription = params.get("error_description");
-  const { logout, login } = useOidc();
+
+  const handleLogout = () => {
+    auth.removeUser().then(() => {
+      window.location.href = "/";
+    });
+  };
 
   useEffect(() => {
     if (accessDenied) {
@@ -57,7 +62,7 @@ export const OIDCError = () => {
             variant={"primary"}
             size={"sm"}
             className={"mt-5"}
-            onClick={() => logout("/", { client_id: config.clientId })}
+            onClick={handleLogout}
           >
             Continue
             <ArrowRightIcon size={16} />
@@ -67,7 +72,7 @@ export const OIDCError = () => {
             variant={"default-outline"}
             size={"sm"}
             className={"mt-5"}
-            onClick={() => logout("/", { client_id: config.clientId })}
+            onClick={handleLogout}
           >
             Trouble logging in? Try again.
           </Button>
@@ -80,14 +85,14 @@ export const OIDCError = () => {
             <span className={"inline capitalize"}>
               {invalidRequest && errorDescription
                 ? errorDescription
-                : oidcUserLoadingState}
+                : auth.error?.message}
             </span>
           </Paragraph>
           <Button
             variant={"primary"}
             size={"sm"}
             className={"mt-5"}
-            onClick={() => logout("/", { client_id: config.clientId })}
+            onClick={handleLogout}
           >
             Logout
           </Button>
