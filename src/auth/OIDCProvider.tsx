@@ -32,9 +32,13 @@ export default function OIDCProvider({ children }: Props) {
       // Store ALL OIDC state (including PKCE verifier) in localStorage so it
       // survives Authentik's redirect chain which loses sessionStorage.
       userStore: new WebStorageStateStore({ store: window.localStorage }),
-      // Send token requests without cookies to avoid Django CSRF enforcement.
-      // The token endpoint uses client_id + PKCE for auth, not session cookies.
-      fetchRequestCredentials: "omit" as RequestCredentials,
+      // Override token endpoint to use same-origin proxy. The cross-origin POST
+      // to sso.* gets 405 from Authentik regardless of cookies/CSRF settings.
+      // Same-origin proxy at skmesh.*/application/o/token/ routes to HTTP:9000.
+      metadataSeed: {
+        token_endpoint: window.location.origin + "/application/o/token/",
+        issuer: window.location.origin + "/application/o/skmesh/",
+      },
       // Automatically process the ?code= callback when it appears in the URL
       onSigninCallback: () => {
         // After the callback, remove the OIDC params from the URL without
