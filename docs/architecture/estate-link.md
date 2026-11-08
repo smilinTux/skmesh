@@ -113,6 +113,30 @@ From an access-group client of A: `ip route get <B exposed peer IP>` shows `dev 
 then ping and a TCP port. The same from B to A. On each gateway, `wg show` (handshake, transfer)
 and `iptables -t nat -S POSTROUTING | grep 10.255.255`.
 
+### 5. Exposing only some peers (allow-list)
+
+When an estate should show the other side only a few machines (not its whole range), do both:
+
+1. In the **other** estate, route single addresses instead of the range: one `/32` route per
+   allowed peer (same routing peer, same distribution group). Its peers then have no route to the
+   rest of your range at all.
+2. On **your** gateway, enforce it, so a mistake on the other side cannot widen it. In
+   `wg-<other>.conf` replace the blanket `-i %i -o wt0 -j ACCEPT` with:
+
+```ini
+PostUp = iptables -I FORWARD 1 -i wt0 -o %i -j ACCEPT
+PostUp = iptables -I FORWARD 1 -i %i -o wt0 -j DROP
+PostUp = iptables -I FORWARD 1 -i %i -o wt0 -d <peer1>,<peer2> -j ACCEPT
+PostUp = iptables -I FORWARD 1 -i %i -o wt0 -m conntrack --ctstate ESTABLISHED,RELATED -j ACCEPT
+PostUp = iptables -I INPUT 1 -i %i -j DROP
+PostUp = iptables -I INPUT 1 -i %i -m conntrack --ctstate ESTABLISHED,RELATED -j ACCEPT
+```
+
+(with the matching `PostDown = iptables -D ...` lines). Your own clients keep reaching the other
+estate (their replies are ESTABLISHED); the other estate can open connections only to the listed
+peers, and never to the gateway's own services. Peer mesh IPs are stable per peer, but re-check
+the list after re-enrolling one.
+
 ## Taking it down
 
 Either side, alone: disable its NetBird route (instant, clients lose the path), then
@@ -126,8 +150,10 @@ the link is retired for good.
 | skmesh | `skmesh.skstack01.douno.it`, NetBird 0.82.0 | `skmesh.nativeassetmanagement.com`, NetBird 0.82.0 |
 | Range | `10.250.0.0/16` | `10.251.0.0/16` |
 | Gateway | norap1001 (`10.250.100.8`), dials out, `wg-nam`, link `10.255.255.1` | namwrk1005 (`10.251.16.178`), listens UDP 51830 (UPnP on the Firewalla), `wg-nor`, link `10.255.255.2` |
-| Route | `nam-estate` 10.251/16 via norap1001 to `estate-nam-access` (laptop .41, noroc2027) | `nor-estate` 10.250/16 via namwrk1005 to `estate-exposed` (namwrk1004) |
+| Route | `nam-estate` 10.251/16 via norap1001 to `estate-nam-access` (laptop .41, noroc2027) | `nor-estate-41` and `nor-estate-noroc2027` (two /32s) via namwrk1005 to `estate-exposed` (namwrk1004) |
 | Measured | .41 / noroc2027 / norap1001 to namwrk1004: 0% loss, about 40 ms, TCP 1713 open | namwrk1004 to norap1001: 0% loss, about 37 ms, skdesk TCP 21116 open |
 
-Both estates still run the default `All <-> All` policy; tightening it is each owner's call.
+NOR shows NAM only .41 and noroc2027 (allow-list above, enforced on norap1001; norap1001 itself and
+every other NOR peer are blocked from NAM, verified). NAM still runs the default `All <-> All`
+policy; tightening it is Casey's call.
 Both run NetBird next to Tailscale on the same hosts without conflict.
