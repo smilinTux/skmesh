@@ -52,10 +52,10 @@ Listening side (here estate B, `/etc/wireguard/wg-<a>.conf`):
 Address = 10.255.255.2/30
 ListenPort = 51830
 PostUp = wg set %i private-key /etc/wireguard/estate-<a>.key
-PostUp = iptables -I FORWARD 1 -i wt0 -o %i -j ACCEPT; iptables -I FORWARD 1 -i %i -o wt0 -j ACCEPT
-PostUp = iptables -t nat -A POSTROUTING -o %i -j MASQUERADE; iptables -t nat -A POSTROUTING -s 10.255.255.0/30 -o wt0 -j MASQUERADE
-PostDown = iptables -D FORWARD -i wt0 -o %i -j ACCEPT; iptables -D FORWARD -i %i -o wt0 -j ACCEPT
-PostDown = iptables -t nat -D POSTROUTING -o %i -j MASQUERADE; iptables -t nat -D POSTROUTING -s 10.255.255.0/30 -o wt0 -j MASQUERADE
+PostUp = iptables -w 10 -I FORWARD 1 -i wt0 -o %i -j ACCEPT; iptables -w 10 -I FORWARD 1 -i %i -o wt0 -j ACCEPT
+PostUp = iptables -w 10 -t nat -A POSTROUTING -o %i -j MASQUERADE; iptables -w 10 -t nat -A POSTROUTING -s 10.255.255.0/30 -o wt0 -j MASQUERADE
+PostDown = iptables -w 10 -D FORWARD -i wt0 -o %i -j ACCEPT; iptables -w 10 -D FORWARD -i %i -o wt0 -j ACCEPT
+PostDown = iptables -w 10 -t nat -D POSTROUTING -o %i -j MASQUERADE; iptables -w 10 -t nat -D POSTROUTING -s 10.255.255.0/30 -o wt0 -j MASQUERADE
 
 [Peer]
 PublicKey = <A gateway public key>
@@ -136,6 +136,26 @@ PostUp = iptables -I INPUT 1 -i %i -m conntrack --ctstate ESTABLISHED,RELATED -j
 estate (their replies are ESTABLISHED); the other estate can open connections only to the listed
 peers, and never to the gateway's own services. Peer mesh IPs are stable per peer, but re-check
 the list after re-enrolling one.
+
+## Surviving a reboot (learned 2026-11-09)
+
+A full restart of the NAM Proxmox host took the link down three ways at once:
+
+1. **xtables lock.** wg-quick ran its PostUp while Docker and NetBird were writing
+   iptables rules, got "Another app is currently holding the xtables lock", and
+   gave up. Use `iptables -w 10` in every PostUp/PostDown (as above) and add a
+   drop-in `wg-quick@<if>.service.d/10-retry.conf` with `After=docker.service
+   netbird.service`, `StartLimitIntervalSec=0`, `Restart=on-failure`, `RestartSec=15`.
+2. **NetBird NeedsLogin.** A peer whose management server was down at boot can
+   end up logged out (no `wt0`). Re-login keeps the same peer and IP:
+   `netbird up --management-url ... --setup-key <one-off key>`.
+3. **UPnP after a router restart.** The router listed the 51830 mapping but did not
+   forward it, and its IGD kept dropping out ("No IGD UPnP Device found"). A
+   **static port forward** on the listening estate's router is the reliable
+   choice; keep UPnP only where no static forward is possible.
+
+Check after any restart: `wg show` (recent handshake), `netbird status` on both
+gateways (`Management: Connected`), and a ping from an access-group client.
 
 ## Taking it down
 
