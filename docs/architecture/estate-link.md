@@ -164,10 +164,26 @@ A full restart of the NAM Proxmox host took the link down three ways at once:
 Check after any restart: `wg show` (recent handshake), `netbird status` on both
 gateways (`Management: Connected`), and a ping from an access-group client.
 
+## Names across the link
+
+Each estate's NetBird resolves only its own `mesh.<operator>.<org-domain>` names. To
+resolve the other side's names, add a non-primary **nameserver group** on each mesh,
+scoped to the access group only:
+
+| On | Domain | Nameserver (other side's NetBird DNS on a peer's mesh IP, UDP 53) | Distributed to |
+|---|---|---|---|
+| A | `mesh.<b-operator>.<org>` | an exposed B peer, e.g. `10.251.195.150` | A's access group |
+| B | `mesh.<a-operator>.<org>` | an exposed A peer, then a second one as fallback | B's exposed group |
+
+Keep `search_domains_enabled` off, so bare names stay local to each estate. Every peer
+runs NetBird DNS on `<mesh-ip>:53` and answers queries from routed sources, so nothing new
+listens. This publishes the other estate's full peer list (names and mesh IPs) to the
+access group; reachability is still only what the routes and policies allow.
+
 ## Taking it down
 
 Either side, alone: disable its NetBird route (instant, clients lose the path), then
-`systemctl disable --now wg-quick@wg-<other>` and the UPnP timer. Delete the groups and keys when
+`systemctl disable --now wg-quick@wg-<other>` and the UPnP timer, and delete the cross-estate nameserver group. Delete the groups and keys when
 the link is retired for good.
 
 ## Worked example (2026-11-08)
