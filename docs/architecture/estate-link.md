@@ -153,6 +153,13 @@ A full restart of the NAM Proxmox host took the link down three ways at once:
    forward it, and its IGD kept dropping out ("No IGD UPnP Device found"). A
    **static port forward** on the listening estate's router is the reliable
    choice; keep UPnP only where no static forward is possible.
+4. **Stale UDP flow after the forward is fixed.** With the static forward in place, a
+   test packet from the dialing estate's WAN reached the gateway, but the tunnel's own
+   packets still did not: the dialer had kept sending from the same source port every
+   25 s (PersistentKeepalive), so a router kept the old, unforwarded flow alive. Moving
+   the dialer to a new source port (`wg set wg-<other> listen-port <new>`) made a fresh
+   flow, and the handshake came up at once. Leave `ListenPort` unset on the dialer, so a
+   restart also picks a new port. Retire the UPnP timer once the static forward works.
 
 Check after any restart: `wg show` (recent handshake), `netbird status` on both
 gateways (`Management: Connected`), and a ping from an access-group client.
@@ -169,7 +176,7 @@ the link is retired for good.
 |---|---|---|
 | skmesh | `skmesh.skstack01.douno.it`, NetBird 0.82.0 | `skmesh.nativeassetmanagement.com`, NetBird 0.82.0 |
 | Range | `10.250.0.0/16` | `10.251.0.0/16` |
-| Gateway | norap1001 (`10.250.100.8`), dials out, `wg-nam`, link `10.255.255.1` | namwrk1005 (`10.251.16.178`), listens UDP 51830 (UPnP on the Firewalla), `wg-nor`, link `10.255.255.2` |
+| Gateway | norap1001 (`10.250.100.8`), dials out, `wg-nam`, link `10.255.255.1` | namwrk1005 (`10.251.16.178`), listens UDP 51830 (static forward on the Firewalla since 2026-11-09), `wg-nor`, link `10.255.255.2` |
 | Route | `nam-estate` 10.251/16 via norap1001 to `estate-nam-access` (laptop .41, noroc2027) | `nor-estate-41` and `nor-estate-noroc2027` (two /32s) via namwrk1005 to `estate-exposed` (namwrk1004) |
 | Measured | .41 / noroc2027 / norap1001 to namwrk1004: 0% loss, about 40 ms, TCP 1713 open | namwrk1004 to norap1001: 0% loss, about 37 ms, skdesk TCP 21116 open |
 
