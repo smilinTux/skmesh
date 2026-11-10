@@ -194,6 +194,7 @@ the link is retired for good.
 | Range | `10.250.0.0/16` | `10.251.0.0/16` |
 | Gateway | norap1001 (`10.250.100.8`), dials out, `wg-nam`, link `10.255.255.1` | namwrk1005 (`10.251.16.178`), listens UDP 51830 (static forward on the Firewalla since 2026-11-09), `wg-nor`, link `10.255.255.2` |
 | Route | `nam-estate` 10.251/16 via norap1001 to `estate-nam-access` (laptop .41, noroc2027) | `nor-estate-41` and `nor-estate-noroc2027` (two /32s) via namwrk1005 to `estate-exposed` (namwrk1004) |
+| Gateway filter (2026-11-10) | `wg-nam` FORWARD: from NAM only to .41 and noroc2027, rest dropped | `wg-nor` FORWARD: from NOR only to an explicit list of 17 Casey hosts by mesh IP (phones excluded), rest dropped |
 | Measured | .41 / noroc2027 / norap1001 to namwrk1004: 0% loss, about 40 ms, TCP 1713 open | namwrk1004 to norap1001: 0% loss, about 37 ms, skdesk TCP 21116 open |
 
 NOR shows NAM only .41 and noroc2027 (allow-list above, enforced on norap1001; norap1001 itself and
