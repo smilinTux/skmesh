@@ -180,6 +180,30 @@ runs NetBird DNS on `<mesh-ip>:53` and answers queries from routed sources, so n
 listens. This publishes the other estate's full peer list (names and mesh IPs) to the
 access group; reachability is still only what the routes and policies allow.
 
+## A direct second client for one host (dual mesh)
+
+Traffic over the link is triangle-routed: client, own gateway, the other estate's
+gateway, then out to the target. When the target is not at the other gateway's site this
+costs real latency (2026-11-10: laptop to ziowk01, 77 ms over the link versus 41 ms direct).
+For a single host that needs the other estate often, give it a second NetBird client on
+the other mesh, and keep the link as its fallback:
+
+- **Run the second client in a container, not as a second system service.** A second
+  `netbird service install -s <name>` on the same host shared the first client's profile
+  (it came up with the other mesh's management URL, the same key and `wt0`) and fought the
+  main client over its interface. The container has its own config volume and nothing to share.
+  Recipe: `scripts/second-mesh-client.sh` (host network, `wt1`, port 51821, its own nft
+  table `NB_NFTABLES_TABLE` and fwmark base `NB_FWMARK_BASE`, `NB_DISABLE_CUSTOM_ROUTING`,
+  no DNS, no client or server routes).
+- **Block inbound on it.** Set it with `docker exec <c> netbird up --block-inbound` once
+  (the env var did not take); it persists in the volume. The other estate still reaches
+  the host only through the link and its gateway filter.
+- **Keep the link route selected.** NetBird's `lookup main suppress_prefixlength 0` rule
+  prefers the second client's connected `/16` while it is up; when it is down, traffic falls
+  back to the link route in the `netbird` table by itself.
+- Trust the new interface in the host firewall (`firewall-cmd --zone=trusted --add-interface=wt1`).
+- Names keep resolving through the cross-estate nameserver group, so nothing changes for users.
+
 ## Taking it down
 
 Either side, alone: disable its NetBird route (instant, clients lose the path), then
